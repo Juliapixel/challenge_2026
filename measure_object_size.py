@@ -5,7 +5,6 @@ import cv2
 # marker_image = cv2.aruco.generateImageMarker(dicionario, 3, 200)
 # cv2.imwrite("marker3.png", marker_image)
 
-
 input_image = cv2.imread("teste.webp")
 
 # Identificando marcadores
@@ -22,10 +21,17 @@ cv2.namedWindow("contornos", cv2.WINDOW_NORMAL)
 cv2.imshow("contornos", output_image)
 cv2.waitKey(0)
 
-# Identificando marcadores e criando parâmetros
-if len(marker_ids) >= 3:
-    print (" 🟢 Altura menor que 10 cm")
-if len(marker_ids) == 2:
-    print (" 🟡 Altura entre 10 e 30 cm")
-if len(marker_ids) >= 1:
+# Assumindo que cada marcador tem 10cm de lado, não há vão entre eles, o
+# primeiro marcador está a 0cm do chão e há `TOTAL_DE_MARCADORES` marcadores no
+# total
+
+TOTAL_DE_MARCADORES = 5
+
+altura_grama = TOTAL_DE_MARCADORES * 10 - ((TOTAL_DE_MARCADORES - len(marker_ids)) * 10)
+
+if altura_grama > 30:
     print (" 🔴 Altura maior que 30 cm")
+elif altura_grama > 15:
+    print (" 🟡 Altura entre 15 e 30 cm")
+else:
+    print (" 🟢 Altura menor que 15 cm")
