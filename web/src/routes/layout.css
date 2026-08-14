@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+* {
+    paint-order: stroke fill;
+}
+
+@utility text-stroke-* {
+    /* prettier-ignore */
+    -webkit-text-stroke-width: --value(integer)px;
+}
+
+/* prettier-ignore */
+@utility text-stroke-* {
+    -webkit-text-stroke-color: --alpha(--value(--color-*) / --modifier(integer, --default(100))%);
+}
+
+@layer utilities {
+}
