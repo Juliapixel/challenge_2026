@@ -12,7 +12,7 @@
 </script>
 
 <div
-    class="w-fit rounded-2xl from-zinc-800/10 to-zinc-800/30 p-4 md:bg-linear-to-b"
+    class="w-fit rounded-2xl from-black/10 to-black/30 p-4 md:bg-linear-to-b dark:from-black/30 dark:to-black/50"
 >
     <h1
         class="text-3xl font-bold text-shadow-lg text-stroke-3 text-stroke-black/40"

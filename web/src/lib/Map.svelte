@@ -2,7 +2,7 @@
     import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
     import { mount, onMount } from "svelte";
     import Pin, { type PinKind } from "./Pin.svelte";
-    import { env } from "$env/dynamic/public";
+    import * as env from "$env/static/public";
 
     let mapElement: HTMLDivElement;
 
@@ -32,7 +32,11 @@
         const map = new maps.Map(mapElement, {
             ...mapOptions,
             center,
-            mapId: env.PUBLIC_MAIN_MAP_ID
+            mapId: env.PUBLIC_MAIN_MAP_ID,
+            colorScheme: window.matchMedia("(prefers-color-scheme: dark)")
+                .matches
+                ? google.maps.ColorScheme.DARK
+                : google.maps.ColorScheme.LIGHT
         });
 
         await new Promise<void>((res) => {
