@@ -30,7 +30,7 @@
 <Collapsible.Root bind:open>
     <Collapsible.Trigger class="contents cursor-pointer">
         <div
-            class="flex flex-row justify-between p-2 border-b border-zinc-200 dark:border-zinc-700 hover:bg-zinc-500/20 md:p-4"
+            class="flex flex-row justify-between border-b border-zinc-200 p-2 hover:bg-zinc-500/20 md:p-4 dark:border-zinc-700"
         >
             <div
                 class="flex w-fit flex-row items-center gap-x-2 align-middle md:gap-x-4"

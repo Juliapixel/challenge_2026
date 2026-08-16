@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { HTMLAttributes } from "svelte/elements";
     import type IconComponent from "@iconify-svelte/material-symbols/types/gfwqskkx.d.js";
-    import InfoIcon from "@iconify-svelte/material-symbols/info";
+    import InfoIcon from "@iconify-svelte/material-symbols/info-outline";
     import WarningIcon from "@iconify-svelte/material-symbols/warning-outline";
     import ErrorIcon from "@iconify-svelte/material-symbols/error-outline";
 
