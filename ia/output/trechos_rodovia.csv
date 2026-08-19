@@ -1,0 +1,11 @@
+trecho_id,rodovia_id,km_inicial,km_final,tipo_vegetacao
+BR-101_km000_km050,BR-101,0.0,50.0,seila oq
+BR-101_km050_km100,BR-101,50.0,100.0,lerolerolero
+BR-101_km100_km150,BR-101,100.0,150.0,lerolerolero
+BR-101_km150_km200,BR-101,150.0,200.0,seila oq
+BR-101_km200_km250,BR-101,200.0,250.0,alguma coisa
+BR-101_km250_km300,BR-101,250.0,300.0,lerolerolero
+SP-330_km000_km050,SP-330,0.0,50.0,lerolerolero
+SP-330_km050_km100,SP-330,50.0,100.0,lerolerolero
+SP-330_km100_km150,SP-330,100.0,150.0,seila oq
+SP-330_km150_km180,SP-330,150.0,180.0,lerolerolero
