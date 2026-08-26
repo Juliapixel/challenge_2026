@@ -24,13 +24,20 @@ KM_TOTAL = 29  # km 0 ao km 29, faixa real de manutenção do SP-021 Trecho Oest
 PONTO_NORTE = (-23.53, -46.79)
 PONTO_SUL = (-23.63, -46.76)
 
-# Distribuição de urgência combinada com o grupo:
-# ~40% níveis 1-2, ~35% nível 3, ~25% níveis 4-5
-NIVEIS_URGENCIA = [1, 2, 3, 4, 5]
-PESOS_URGENCIA = [20, 20, 35, 15, 10]
+# Status de urgência (semáforo), combinado com o grupo:
+#   verde    -> não precisa de poda
+#   amarelo  -> atenção, poda deve ser programada
+#   vermelho -> poda imediata
+#   preto    -> já podado (não entra na fila de otimização)
+#
+# Distribuição escolhida: cenário crítico, maioria amarelo/vermelho
+# (serve pra testar o guloso sob pressão, com bastante trecho disputando funcionário)
+NIVEIS_URGENCIA = ["verde", "amarelo", "vermelho", "preto"]
+PESOS_URGENCIA = [15, 35, 35, 15]
 
-# Prazo-limite por nível de urgência (quanto mais urgente, menor o prazo)
-PRAZO_DIAS_POR_NIVEL = {1: 30, 2: 21, 3: 14, 4: 7, 5: 3}
+# Prazo-limite por status (só faz sentido para amarelo/vermelho).
+# verde e preto não entram na fila do scheduler, então não têm prazo.
+PRAZO_DIAS_POR_NIVEL = {"amarelo": 14, "vermelho": 3}
 
 
 def interpolar(p1, p2, fracao):
@@ -63,17 +70,22 @@ def gerar_trechos_fake(n=N_TRECHOS_FAKE):
 
 
 def gerar_previsao_urgencia(trecho_ids):
-    """Simula a saída do modelo de ML do colega: um nível de urgência por trecho."""
+    """
+    Simula a saída do modelo de ML do colega: um status de urgência por trecho.
+    verde/preto -> prazo_limite fica NULL (não entram na fila do scheduler)
+    amarelo/vermelho -> recebem prazo_limite (usado pelo guloso pra priorizar)
+    """
     previsoes = []
     hoje = date.today()
     for trecho_id in trecho_ids:
-        nivel = random.choices(NIVEIS_URGENCIA, weights=PESOS_URGENCIA)[0]
-        prazo_limite = hoje + timedelta(days=PRAZO_DIAS_POR_NIVEL[nivel])
+        status = random.choices(NIVEIS_URGENCIA, weights=PESOS_URGENCIA)[0]
+        prazo_dias = PRAZO_DIAS_POR_NIVEL.get(status)  # None para verde/preto
+        prazo_limite = hoje + timedelta(days=prazo_dias) if prazo_dias else None
 
         previsoes.append({
             "trecho_id": trecho_id,
             "data_previsao": hoje,
-            "nivel_urgencia": nivel,
+            "nivel_urgencia": status,
             "prazo_limite": prazo_limite,
         })
     return previsoes
