@@ -1,9 +1,35 @@
 import cv2
 
-# Gerando marcadores
-# dicionario = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-# marker_image = cv2.aruco.generateImageMarker(dicionario, 3, 200)
-# cv2.imwrite("marker3.png", marker_image)
+
+def id_estaca (marker_corners, marker_ids):
+    # Se nenhum ID for identificado
+    if marker_ids is None or len(marker_ids) == 0:
+        return None
+
+    marcadores = []
+
+    for i, corner in enumerate(marker_corners):
+        pontos = corner[0] # estamos alcançando as vertices de cada ArUco
+        centro_altura = pontos[:,1].mean() 
+        marcadores.append((int(marker_ids[i]), centro_altura))
+
+    marcadores.sort(key=lambda m: m[1])
+    primeiro_id = marcadores[0][0]
+
+    return primeiro_id
+
+
+def altura_grama(marker_ids):
+    ALTURA_MARCADOR_CM = 5.0  # Supondo que cada marcador tem 5 cm de altura
+    MARCADORES_POR_ESTACA = 4  # Cada estaca tem 4 marcadores
+
+    if marker_ids is not None:
+        altura_grama = MARCADORES_POR_ESTACA * ALTURA_MARCADOR_CM - (ALTURA_MARCADOR_CM * len(marker_ids))
+    else:
+        altura_grama = 0.0
+
+    return altura_grama
+
 
 input_image = cv2.imread("teste.webp")
 
@@ -21,17 +47,10 @@ cv2.namedWindow("contornos", cv2.WINDOW_NORMAL)
 cv2.imshow("contornos", output_image)
 cv2.waitKey(0)
 
-# Assumindo que cada marcador tem 10cm de lado, não há vão entre eles, o
-# primeiro marcador está a 0cm do chão e há `TOTAL_DE_MARCADORES` marcadores no
-# total
 
-TOTAL_DE_MARCADORES = 5
 
-altura_grama = TOTAL_DE_MARCADORES * 10 - ((TOTAL_DE_MARCADORES - len(marker_ids)) * 10)
+print(f'ID da estaca: {id_estaca(marker_corners, marker_ids)}')
+print(f'Altura da grama: {altura_grama(marker_ids)} cm')
 
-if altura_grama > 30:
-    print (" 🔴 Altura maior que 30 cm")
-elif altura_grama > 15:
-    print (" 🟡 Altura entre 15 e 30 cm")
-else:
-    print (" 🟢 Altura menor que 15 cm")
+
+
