@@ -1,8 +1,15 @@
 module coletor
 
+<<<<<<< HEAD
 go 1.25.0
 
 require (
+=======
+go 1.26.6
+
+require (
+	github.com/blackjack/webcam v0.6.1 // indirect
+>>>>>>> julia/fix-mediadevices
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pion/datachannel v1.6.2 // indirect
 	github.com/pion/dtls/v3 v3.1.5 // indirect
