@@ -15,7 +15,7 @@ não é placeholder. Critérios definidos com o grupo:
 import random
 from datetime import time
 from faker import Faker
-from db import conectar
+from ia.cronograma.db import conectar
 
 fake = Faker("pt_BR")
 
@@ -36,7 +36,7 @@ BASES = [
     {"nome": "Base Taboão da Serra", "lat": -23.6094, "lon": -46.7593},
 ]
 
-VELOCIDADE_PODA_M_POR_MIN = 2.5  # igual para todos os funcionários
+VELOCIDADE_PODA_M_POR_HORA = 667  # igual para todos; premissa: ~1.5h para podar 1km (faixa 1-2h/km)
 
 
 def gerar_funcionarios(n=N_FUNCIONARIOS):
@@ -55,7 +55,7 @@ def gerar_funcionarios(n=N_FUNCIONARIOS):
             "localizacao_base": base["nome"],
             "latitude_base": base["lat"],
             "longitude_base": base["lon"],
-            "velocidade_poda_m_por_min": VELOCIDADE_PODA_M_POR_MIN,
+            "velocidade_poda_m_por_hora": VELOCIDADE_PODA_M_POR_HORA,
         })
     return funcionarios
 
@@ -70,13 +70,13 @@ def inserir_funcionarios(funcionarios):
             INSERT INTO funcionarios
                 (nome, turno_inicio, turno_fim, dias_trabalho,
                  localizacao_base, latitude_base, longitude_base,
-                 velocidade_poda_m_por_min)
+                 velocidade_poda_m_por_hora)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 f["nome"], f["turno_inicio"], f["turno_fim"], f["dias_trabalho"],
                 f["localizacao_base"], f["latitude_base"], f["longitude_base"],
-                f["velocidade_poda_m_por_min"],
+                f["velocidade_poda_m_por_hora"],
             ),
         )
     conn.commit()

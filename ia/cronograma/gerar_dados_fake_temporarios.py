@@ -15,7 +15,7 @@ região Osasco / Taboão da Serra (mesma faixa usada nas obras reais de manuten�
 """
 import random
 from datetime import date, timedelta
-from db import conectar
+from ia.cronograma.db import conectar
 
 N_TRECHOS_FAKE = 15
 KM_TOTAL = 29  # km 0 ao km 29, faixa real de manutenção do SP-021 Trecho Oeste
