@@ -1,7 +1,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/pion/mediadevices"
 	"github.com/pion/mediadevices/pkg/codec/x264"
@@ -12,9 +19,17 @@ import (
 	_ "github.com/pion/mediadevices/pkg/driver/camera"
 )
 
-func main() {
+var sessionID string
+
+func main() {if len(os.Args) != 2 {
+	fmt.Printf("usage: %s <serverAddr> \n ", os.Args[0])
+	return
+	}
+
+	serverAddr := os.Args[1]
+
 	pc, err := webrtc.NewPeerConnection(webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{webrtc.ICEServer{URLs: []string{"stun:stun.l.google.com:19302"}}},
+		ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}},
 	})
 	if err != nil {
 		panic(err)
@@ -44,7 +59,73 @@ func main() {
 		panic(err)
 	}
 
+	outDir := filepath.Join("recordings", time.Now().Format("2026-09-01_20-45-33"))
+
+	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
+		fmt.Println("estado ICE:", state)
+		switch state {
+		case webrtc.ICEConnectionStateDisconnected:
+			// add timer de espera 
+		case webrtc.ICEConnectionStateFailed:
+			if _, err := startCMAFRecording(stream, outDir); err != nil {
+				fmt.Println("error inicializing record:", err)
+			}
+		case webrtc.ICEConnectionStateConnected:
+			// add stopRecording e upload, se estava gravando
+		}
+	})
 	stream.GetVideoTracks()[0].(*mediadevices.VideoTrack).NewReader(false).Read()
 
-	panic(pc)
+	videoTrack := stream.GetVideoTracks()[0]
+
+	if _, err := pc.AddTrack(videoTrack.(*mediadevices.VideoTrack)); err != nil {
+		panic(err)
+	}
+
+	offer, err := pc.CreateOffer(nil)
+	if err != nil {
+		panic(err)
+	}
+	gatherComplete := webrtc.GatheringCompletePromise(pc)
+
+	if err := pc.SetLocalDescription(offer); err != nil {
+		panic(err)
+	}
+	<-gatherComplete
+
+	offerJson, err := json.Marshal(pc.LocalDescription())
+	if err != nil {
+		panic(err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/sdp", serverAddr), bytes.NewReader(offerJson))
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	sessionID = resp.Header.Get("X-Session-Id")
+	fmt.Println("Session created", sessionID)
+	if err != nil {
+		panic(err)
+	}
+
+	answerBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	answer := webrtc.SessionDescription{}
+	if err := json.Unmarshal(answerBody, &answer); err != nil {
+		panic(err)
+	}
+	if err := pc.SetRemoteDescription(answer); err != nil {
+		panic(err)
+	}
+	fmt.Println("Connected, sending video :P")
 }
