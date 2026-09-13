@@ -6,7 +6,14 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"path/filepath"
+	"os"
+	"os/exec"
 
+	"gocv.io/x/gocv"
+	
+	"github.com/pion/webrtc/v4/pkg/media/h264writer"
+	
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
 )
@@ -15,8 +22,13 @@ type session struct {
 }
 
 var (
+    pc *webrtc.PeerConnection
 	sessionsMu sync.Mutex
 	sessions   = map[string]*session{}
+)
+const (
+	frameWidth  = 1280
+	frameHeight = 720
 )
 
 func main() {
@@ -36,27 +48,81 @@ func main() {
 			panic(err)
 		}
 		
-		pc, err := createPeerConnection()
-		if err != nil {
-			panic(err)
-		}
-
-		sessionID := uuid.NewString()
+		sessionID :=  r.Header.Get("X-Session-Id")
 		sessionsMu.Lock()
-		sessions[sessionID] = &session{pc: pc}
+		s, exists := sessions[sessionID]
 		sessionsMu.Unlock()
+
+		if exists {
+			pc = s.pc
+		}  else {
+			pc, err = createPeerConnection() 
+			if err != nil {
+				panic(err)
+			}
+			sessionID = uuid.NewString()
+			sessionsMu.Lock()
+			sessions[sessionID] = &session{pc: pc}
+			sessionsMu.Unlock()
+		}
 
 		pc.OnTrack(func(track *webrtc.TrackRemote, receiver *webrtc.RTPReceiver){
 			fmt.Printf("[%s] receiving track: %s %s \n",sessionID, track.Kind(), track.Codec().MimeType)
-			buf := make([]byte, 1500)
-			for {
-				_, _, err := track.Read(buf)
-				if err != nil {
+			cmd := exec.Command("ffmpeg",
+			"-f", "h264",
+			"-i", "pipe:0",
+			"-f", "rawvideo",
+			"-pix_fmt", "bgr24",
+			"pipe:1",
+			)
+			stdin, err := cmd.StdinPipe()
+			if err != nil {
+				fmt.Println("error creating stdin pipe:", err)
+				return
+			}
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				fmt.Println("error creating stdout pipe:", err)
+				return
+			}
+			if err := cmd.Start(); err != nil {
+				fmt.Println("error initializing ffmpeg:", err)
+				return
+			}
+			h264Writer := h264writer.NewWith(stdin)
+			go func() {
+				defer h264Writer.Close()
+				for {
+					pkt, _, readErr := track.ReadRTP()
+					if readErr != nil {
+						return
+					}
+					if err := h264Writer.WriteRTP(pkt); err != nil {
+						fmt.Println("error writing RTP:", err)
+						return
+					}
+				}
+			}()
+			go func() {
+				buf := make([]byte, frameWidth*frameHeight*3)
+				for {
+				if _, err := io.ReadFull(stdout, buf); err != nil {
+					fmt.Printf("[%s] end of stream: %v\n", sessionID, err)
 					return
 				}
-				//gravar/encaminhar pacote rtp recebidos
+
+			mat, err := gocv.NewMatFromBytes(frameHeight, frameWidth, gocv.MatTypeCV8UC3, buf)
+			if err != nil {
+				fmt.Println("error creating Mat:", err)
+				continue
 			}
-		})
+
+			// cv
+
+			mat.Close()
+		}
+	}()
+})
 		pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
 			fmt.Printf("[%s] ICE state: %s \n", sessionID, state)
 			if state == webrtc.ICEConnectionStateFailed {
@@ -83,10 +149,6 @@ func main() {
 		}
 		<-gatherComplete
 
-		if err := pc.SetLocalDescription(answer); err != nil {
-			panic(err)
-		}
-
 		w.Header().Set("X-Session-Id", sessionID)
 		answerJson, err := json.Marshal(pc.LocalDescription())
 		if err != nil {
@@ -94,7 +156,8 @@ func main() {
 		}
 		w.Write(answerJson)
 	})
-	
+	upload()
+
 	fmt.Println(" listening port: 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
@@ -119,5 +182,49 @@ func createPeerConnection() (*webrtc.PeerConnection, error) {
 	
 	return api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{{URLs: []string{"stun:stun.l.google.com:19302"}}},
+	})
+}
+func upload() {
+	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	sessionID := r.Header.Get("X-Session-Id")
+
+	if err := r.ParseMultipartForm(32 << 20); err != nil { 
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	destDir := filepath.Join("uploads", sessionID)
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	destPath := filepath.Join(destDir, header.Filename)
+	dest, err := os.Create(destPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer dest.Close()
+
+	if _, err := io.Copy(dest, file); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Printf("[%s] received: %s\n", sessionID, header.Filename)
+	w.WriteHeader(http.StatusOK)
 	})
 }

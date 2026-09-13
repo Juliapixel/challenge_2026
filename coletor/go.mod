@@ -6,6 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/pion/mediadevices v0.10.0
 	github.com/pion/webrtc/v4 v4.2.18
+	gocv.io/x/gocv v0.31.0
 )
 
 require (

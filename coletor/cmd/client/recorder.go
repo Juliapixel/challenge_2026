@@ -6,11 +6,12 @@ import (
 	"io"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/pion/mediadevices"
 )
 
-func startCMAFRecording(stream mediadevices.MediaStream, outDir string) (stop func(), err error) {
+func startRecording(stream mediadevices.MediaStream, outDir string) (stop func(), err error) {
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create outDir: %w", err)
 	}
@@ -28,10 +29,15 @@ func startCMAFRecording(stream mediadevices.MediaStream, outDir string) (stop fu
 	"-c:v", "copy",
 	"-f", "mp4",
 	"-movflags", "+frag_keyframe+empty_moov+default_base_moof",
-	filepath.Join(outDir, "recording.mp4"),
+	filepath.Join( "recording.mp4"),
 	)
 	cmd.Dir = outDir
-	cmd.Stderr = os.Stderr
+	logFile, err := os.Create(filepath.Join(outDir, "ffmpeg.log"))
+	if err == nil {
+		cmd.Stderr = logFile
+	} else {
+		cmd.Stderr = os.Stderr
+	}
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -58,4 +64,8 @@ func startCMAFRecording(stream mediadevices.MediaStream, outDir string) (stop fu
 		}
 	}
 	return stop, nil
+}
+
+func newOutDir() string {
+	return filepath.Join("recordings", time.Now().Format("2006-01-02_15-04-05"))
 }
